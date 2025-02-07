@@ -106,12 +106,15 @@ class DetailScreenViewModel @Inject constructor(
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DetailScreen(viewModel: DetailScreenViewModel = hiltViewModel()) {
+fun DetailScreen(
+    viewModel: DetailScreenViewModel = hiltViewModel(),
+    onBackClick: () -> Unit
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     if (uiState.error != null) {
         ErrorDialog(
-            onDismiss = {}, // TODO HANDLE
+            onDismiss = { onBackClick() },
             onRetry = { viewModel.connectToWebSocket() },
         )
     }

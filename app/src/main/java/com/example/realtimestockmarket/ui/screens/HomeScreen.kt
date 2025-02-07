@@ -91,7 +91,10 @@ class HomeScreenViewModel @Inject constructor(
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun HomeScreen(viewModel: HomeScreenViewModel = hiltViewModel()) {
+fun HomeScreen(
+    viewModel: HomeScreenViewModel = hiltViewModel(),
+    onItemClick: (CryptoCurrency) -> Unit
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val updatedTime by rememberSaveable { mutableStateOf(getCurrentTime()) }
 
@@ -111,9 +114,7 @@ fun HomeScreen(viewModel: HomeScreenViewModel = hiltViewModel()) {
     HomeScreenContent(
         cryptoCurrencyList = uiState.cryptoList,
         updatedTime = updatedTime,
-        onItemClick = {
-
-        }
+        onItemClick = { onItemClick(it) }
     )
 }
 
