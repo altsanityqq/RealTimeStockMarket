@@ -16,7 +16,7 @@ class BinanceRepository @Inject constructor(
     private val client: OkHttpClient
 ) {
     private var lastUpdateTime = 0L
-    private val updateInterval = 500L
+    private var updateInterval = 1000L
     private var webSocket: WebSocket? = null
 
     fun fetchCryptoList(): List<CryptoCurrency> {
@@ -70,6 +70,10 @@ class BinanceRepository @Inject constructor(
                 onFailure(t)
             }
         })
+    }
+
+    fun updateInterval(newInterval: Long) {
+        updateInterval = newInterval
     }
 
     fun closeWebSocket() {

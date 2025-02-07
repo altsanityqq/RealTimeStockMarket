@@ -8,12 +8,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -28,6 +32,7 @@ import com.example.realtimestockmarket.R
 import com.example.realtimestockmarket.data.model.CryptoCurrency
 import com.example.realtimestockmarket.data.repository.BinanceRepository
 import com.example.realtimestockmarket.ui.components.ErrorDialog
+import com.example.realtimestockmarket.ui.components.ProgressDialog
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
@@ -44,7 +49,7 @@ data class DetailScreenUiState(
     val isLoading: Boolean = false,
     val price: String = "",
     val prices: List<Pair<Float, Float>> = emptyList(),
-    val error: Throwable? = null
+    val error: Throwable? = null,
 )
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -56,6 +61,13 @@ class DetailScreenViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(DetailScreenUiState(isLoading = true))
     val uiState = _uiState.asStateFlow()
 
+    private val _updateInterval = MutableStateFlow(1000L)
+
+    fun setUpdateInterval(interval: Long) {
+        _updateInterval.value = interval
+        repository.updateInterval(interval)
+    }
+
     private var xValue = 0f
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -63,15 +75,12 @@ class DetailScreenViewModel @Inject constructor(
         viewModelScope.launch {
             repository.connectWebSocket(
                 cryptoSymbol,
-                onOpen = {
-                },
+                onOpen = {},
                 onUpdate = { price ->
                     updatePrice(price.toFloat())
                 },
                 onFailure = { error ->
-                    _uiState.update {
-                        DetailScreenUiState(error = error)
-                    }
+                    _uiState.update { DetailScreenUiState(error = error) }
                 }
             )
         }
@@ -83,12 +92,11 @@ class DetailScreenViewModel @Inject constructor(
             val updatedList = _uiState.value.prices.toMutableList().apply {
                 add(Pair(xValue, newPrice))
                 xValue += 1f
-
-                val minTime = xValue - 60 * 5
-                removeAll { it.first < minTime }
+                removeAll { it.first < xValue - 60 * 5 }
             }
             _uiState.emit(
                 DetailScreenUiState(
+                    isLoading = false,
                     price = newPrice.toString(),
                     prices = updatedList
                 )
@@ -112,6 +120,12 @@ fun DetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     viewModel.connectToWebSocket(cryptoCurrency.symbol)
 
+    if (uiState.isLoading) {
+        ProgressDialog(
+            onDismiss = onBackClick
+        )
+    }
+
     if (uiState.error != null) {
         ErrorDialog(
             onDismiss = { onBackClick() },
@@ -123,6 +137,10 @@ fun DetailScreen(
         cryptoCurrency = cryptoCurrency,
         price = uiState.price,
         prices = uiState.prices,
+        onIntervalSelected = { viewModel.setUpdateInterval(it) },
+        onDismiss = {
+            onBackClick()
+        },
         modifier = Modifier.padding(16.dp)
     )
 }
@@ -132,26 +150,45 @@ private fun DetailScreenContent(
     cryptoCurrency: CryptoCurrency,
     price: String,
     prices: List<Pair<Float, Float>>,
+    onIntervalSelected: (Long) -> Unit,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
+    Column(modifier) {
         Text(
             text = "${cryptoCurrency.symbol} ${stringResource(R.string.price)}",
-            style = MaterialTheme.typography.headlineSmall.copy(
-                fontWeight = FontWeight.SemiBold
-            )
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold)
         )
         Spacer(modifier = Modifier.height(10.dp))
         Row {
             Text(
                 text = "${cryptoCurrency.symbol} to USD: 1 ${cryptoCurrency.symbol} " +
-                        "${stringResource(R.string.equals)} " +
-                        "$$price USD",
+                        "${stringResource(R.string.equals)} $$price USD",
                 style = MaterialTheme.typography.titleMedium
             )
         }
         Spacer(modifier = Modifier.height(10.dp))
         LineChartView(priceList = prices)
+        Spacer(modifier = Modifier.height(10.dp))
+        IntervalSelectionDropdown(onIntervalSelected, onDismiss = onDismiss)
+    }
+}
+
+@Composable
+private fun IntervalSelectionDropdown(onIntervalSelected: (Long) -> Unit, onDismiss: () -> Unit) {
+    val intervals = listOf(1000L, 2000L, 5000L)
+    var selectedInterval by remember { mutableStateOf(intervals.first()) }
+
+    DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
+        intervals.forEach { interval ->
+            DropdownMenuItem(
+                text = { Text("${interval / 1000} sec") },
+                onClick = {
+                    selectedInterval = interval
+                    onIntervalSelected(interval)
+                }
+            )
+        }
     }
 }
 
@@ -159,25 +196,14 @@ private fun DetailScreenContent(
 private fun LineChartView(priceList: List<Pair<Float, Float>>) {
     val context = LocalContext.current
     val chart = remember { LineChart(context) }
-
-    val entries = priceList.map { (time, price) ->
-        Entry(time, price)
-    }
-
+    val entries = priceList.map { (time, price) -> Entry(time, price) }
     LaunchedEffect(priceList) {
-        val dataSet = LineDataSet(entries, "Price Data")
-        dataSet.color = ColorTemplate.MATERIAL_COLORS[0]
-        dataSet.setDrawValues(false)
-
-        val lineData = LineData(dataSet)
-        chart.data = lineData
+        val dataSet = LineDataSet(entries, "Price Data").apply {
+            color = ColorTemplate.MATERIAL_COLORS[0]
+            setDrawValues(false)
+        }
+        chart.data = LineData(dataSet)
         chart.invalidate()
     }
-
-    AndroidView(
-        factory = { chart },
-        modifier = Modifier.fillMaxSize()
-    ) {
-        it.invalidate()
-    }
+    AndroidView(factory = { chart }, modifier = Modifier.fillMaxSize()) { it.invalidate() }
 }

@@ -23,8 +23,11 @@ import androidx.compose.ui.window.Dialog
 import com.example.realtimestockmarket.R
 
 @Composable
-fun ProgressDialog(modifier: Modifier = Modifier) {
-    Dialog(onDismissRequest = {}) {
+fun ProgressDialog(
+    onDismiss: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = modifier
                 .width(100.dp)
