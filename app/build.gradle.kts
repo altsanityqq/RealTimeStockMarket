@@ -9,7 +9,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+
     id("dagger.hilt.android.plugin")
+    id("kotlin-parcelize")
     kotlin("kapt")
 }
 
@@ -77,4 +79,6 @@ dependencies {
     implementation(libs.navigation.compose)
 
     implementation(libs.mpandroidchart)
+    implementation(libs.kotlinx.serialization.json)
+
 }

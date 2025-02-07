@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -57,17 +58,22 @@ class HomeScreenViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeScreenUiState(isLoading = true))
     val uiState = _uiState.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
     init {
-        loadFakeCryptoList()
-        //loadCryptoList()
+        //loadFakeCryptoList()
+        loadCryptoList()
     }
 
-    private fun loadFakeCryptoList() {
-        val list = List(50) {
-            CryptoCurrency(symbol = "Test $it", price = "10$it")
-        }
-        _uiState.update {
-            HomeScreenUiState(cryptoList = list)
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun getFilteredCryptoList(): List<CryptoCurrency> {
+        val query = searchQuery.value.lowercase()
+        return uiState.value.cryptoList.filter {
+            it.symbol.lowercase().contains(query)
         }
     }
 
@@ -87,6 +93,15 @@ class HomeScreenViewModel @Inject constructor(
             }
         }
     }
+
+    private fun loadFakeCryptoList() {
+        val list = List(50) {
+            CryptoCurrency(symbol = "Test $it", price = "10$it")
+        }
+        _uiState.update {
+            HomeScreenUiState(cryptoList = list)
+        }
+    }
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -97,6 +112,8 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val updatedTime by rememberSaveable { mutableStateOf(getCurrentTime()) }
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val filteredList = viewModel.getFilteredCryptoList()
 
     if (uiState.isLoading) {
         ProgressDialog()
@@ -112,9 +129,13 @@ fun HomeScreen(
     }
 
     HomeScreenContent(
-        cryptoCurrencyList = uiState.cryptoList,
+        cryptoCurrencyList = filteredList,
+        searchQuery = searchQuery,
         updatedTime = updatedTime,
-        onItemClick = { onItemClick(it) }
+        onItemClick = { onItemClick(it) },
+        onSearchQueryChanged = {
+            viewModel.updateSearchQuery(it)
+        }
     )
 }
 
@@ -122,11 +143,23 @@ fun HomeScreen(
 @Composable
 private fun HomeScreenContent(
     cryptoCurrencyList: List<CryptoCurrency>,
+    searchQuery: String,
     updatedTime: String,
     onItemClick: (CryptoCurrency) -> Unit,
+    onSearchQueryChanged: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { onSearchQueryChanged(it) },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            label = { Text(stringResource(R.string.search)) }
+        )
+
         Row(modifier = Modifier.padding(vertical = 16.dp, horizontal = 8.dp)) {
             Text(
                 text = stringResource(R.string.updated_on),

@@ -13,6 +13,7 @@ sealed class RealTimeStockMarketScreen(@StringRes val title: Int, val route: Str
 class RealTimeStockMarketNavigationActions(navController: NavController) {
     val navigateBack: () -> Unit = {
         navController.navigateUp()
+
     }
 
     val navigateToDetail: () -> Unit = {
@@ -24,5 +25,4 @@ class RealTimeStockMarketNavigationActions(navController: NavController) {
     private fun NavOptionsBuilder.navWithStackOption() {
         launchSingleTop = true
     }
-
 }

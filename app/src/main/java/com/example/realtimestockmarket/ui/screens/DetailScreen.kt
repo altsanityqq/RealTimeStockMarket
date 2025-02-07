@@ -41,7 +41,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class DetailScreenUiState(
-    val cryptoCurrency: CryptoCurrency = CryptoCurrency("btc", ""),
+    val isLoading: Boolean = false,
+    val price: String = "",
     val prices: List<Pair<Float, Float>> = emptyList(),
     val error: Throwable? = null
 )
@@ -52,21 +53,18 @@ class DetailScreenViewModel @Inject constructor(
     private val repository: BinanceRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(DetailScreenUiState())
+    private val _uiState = MutableStateFlow(DetailScreenUiState(isLoading = true))
     val uiState = _uiState.asStateFlow()
 
     private var xValue = 0f
 
-    init {
-        connectToWebSocket()
-    }
-
     @RequiresApi(Build.VERSION_CODES.O)
-    fun connectToWebSocket() {
+    fun connectToWebSocket(cryptoSymbol: String) {
         viewModelScope.launch {
             repository.connectWebSocket(
-                "btcusdt", // TODO HANDLE
-                onOpen = {},
+                cryptoSymbol,
+                onOpen = {
+                },
                 onUpdate = { price ->
                     updatePrice(price.toFloat())
                 },
@@ -91,7 +89,7 @@ class DetailScreenViewModel @Inject constructor(
             }
             _uiState.emit(
                 DetailScreenUiState(
-                    cryptoCurrency = CryptoCurrency("btc", price = newPrice.toString()),
+                    price = newPrice.toString(),
                     prices = updatedList
                 )
             )
@@ -107,20 +105,23 @@ class DetailScreenViewModel @Inject constructor(
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun DetailScreen(
+    cryptoCurrency: CryptoCurrency,
     viewModel: DetailScreenViewModel = hiltViewModel(),
     onBackClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    viewModel.connectToWebSocket(cryptoCurrency.symbol)
 
     if (uiState.error != null) {
         ErrorDialog(
             onDismiss = { onBackClick() },
-            onRetry = { viewModel.connectToWebSocket() },
+            onRetry = { viewModel.connectToWebSocket(cryptoCurrency.symbol) },
         )
     }
 
     DetailScreenContent(
-        cryptoCurrency = uiState.cryptoCurrency,
+        cryptoCurrency = cryptoCurrency,
+        price = uiState.price,
         prices = uiState.prices,
         modifier = Modifier.padding(16.dp)
     )
@@ -129,6 +130,7 @@ fun DetailScreen(
 @Composable
 private fun DetailScreenContent(
     cryptoCurrency: CryptoCurrency,
+    price: String,
     prices: List<Pair<Float, Float>>,
     modifier: Modifier = Modifier
 ) {
@@ -144,7 +146,7 @@ private fun DetailScreenContent(
             Text(
                 text = "${cryptoCurrency.symbol} to USD: 1 ${cryptoCurrency.symbol} " +
                         "${stringResource(R.string.equals)} " +
-                        "$${cryptoCurrency.price} USD",
+                        "$$price USD",
                 style = MaterialTheme.typography.titleMedium
             )
         }

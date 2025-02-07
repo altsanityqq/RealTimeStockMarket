@@ -7,8 +7,10 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.realtimestockmarket.data.model.CryptoCurrency
 import com.example.realtimestockmarket.ui.screens.DetailScreen
 import com.example.realtimestockmarket.ui.screens.HomeScreen
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -24,13 +26,21 @@ fun RealTimeStockMarketNavGraph(
     ) {
         composable(route = RealTimeStockMarketScreen.HomeScreen.route) {
             HomeScreen(onItemClick = {
-                navigationActions.navigateToDetail
+                navController.currentBackStackEntry?.savedStateHandle?.set("crypto", it)
+                navigationActions.navigateToDetail()
             })
         }
         composable(route = RealTimeStockMarketScreen.DetailScreen.route) {
-            DetailScreen(onBackClick = {
-                navigationActions.navigateBack
-            })
+            val cryptoCurrency = navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<CryptoCurrency>("crypto")
+            cryptoCurrency?.let {
+                DetailScreen(
+                    cryptoCurrency = cryptoCurrency,
+                    onBackClick = {
+                        navigationActions.navigateBack()
+                    })
+            }
         }
     }
 }
