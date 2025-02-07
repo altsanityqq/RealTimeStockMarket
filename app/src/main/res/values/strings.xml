@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">RealTimeStockMarket</string>
+
+    <string name="updated_on">Updated:</string>
+    <string name="equals">equals</string>
+    <string name="price">Price</string>
+    <string name="error">An unexpected error occurred. Please try again later.</string>
+    <string name="retry">Retry</string>
+    <string name="cancel">Cancel</string>
+
 </resources>

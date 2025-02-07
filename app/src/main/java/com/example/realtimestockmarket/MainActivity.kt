@@ -5,6 +5,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.ui.Modifier
+import com.example.realtimestockmarket.ui.screens.HomeScreen
 import com.example.realtimestockmarket.ui.theme.RealTimeStockMarketTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -15,6 +21,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             RealTimeStockMarketTheme {
+                Scaffold { paddingValues ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues)
+                    ) {
+                        HomeScreen()
+                    }
+                }
             }
         }
     }
