@@ -66,10 +66,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation(libs.retrofit)
-    implementation(libs.converter.moshi)
-    implementation(libs.moshi.kotlin)
-
     implementation(libs.okhttp)
 
     implementation(libs.hilt.android)
@@ -77,4 +73,8 @@ dependencies {
     implementation(libs.androidx.hilt.work)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.navigation.compose)
+
+    implementation(libs.navigation.compose)
+
+    implementation(libs.mpandroidchart)
 }
